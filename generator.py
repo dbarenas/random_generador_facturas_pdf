@@ -16,6 +16,7 @@ Salida:
 
 import random
 import math
+import argparse
 from datetime import date, timedelta
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -559,23 +560,54 @@ def generar_factura(i, start_date):
 # -----------------------------
 # Generación PDF
 # -----------------------------
-def generar_pdf(path="facturas_compras_200.pdf", n=200, seed=7):
+def generar_pdf(path="facturas_compras_200.pdf", n=200, seed=7, individuales=False):
     random.seed(seed)
-    c = canvas.Canvas(path, pagesize=A4)
     start_date = date(2025, 9, 1)
 
-    for i in range(1, n+1):
-        factura = generar_factura(i, start_date)
+    if individuales:
+        # Modo de archivos individuales
+        for i in range(1, n + 1):
+            individual_path = f"factura_{i}.pdf"
+            c = canvas.Canvas(individual_path, pagesize=A4)
 
-        layout = random.choices(LAYOUTS, weights=LAYOUT_WEIGHTS, k=1)[0]
-        layout(c, factura)
+            factura = generar_factura(i, start_date)
+            layout = random.choices(LAYOUTS, weights=LAYOUT_WEIGHTS, k=1)[0]
+            layout(c, factura)
 
-        # 1 folio por factura
-        c.showPage()
+            c.showPage()
+            c.save()
+        print(f"OK -> Generados {n} archivos PDF individuales (ej: factura_1.pdf)")
+    else:
+        # Modo de archivo único
+        c = canvas.Canvas(path, pagesize=A4)
+        for i in range(1, n+1):
+            factura = generar_factura(i, start_date)
 
-    c.save()
-    print(f"OK -> {path} (páginas: {n})")
+            layout = random.choices(LAYOUTS, weights=LAYOUT_WEIGHTS, k=1)[0]
+            layout(c, factura)
+
+            # 1 folio por factura
+            c.showPage()
+
+        c.save()
+        print(f"OK -> {path} (páginas: {n})")
 
 
 if __name__ == "__main__":
-    generar_pdf()
+    parser = argparse.ArgumentParser(description="Generador de facturas en PDF.")
+    parser.add_argument(
+        "--individuales",
+        type=int,
+        nargs="?",
+        const=10, # Valor por defecto si --individuales no tiene número
+        default=None,
+        help="Genera N facturas en archivos PDF separados. Si no se especifica N, se generan 10."
+    )
+    args = parser.parse_args()
+
+    if args.individuales is not None:
+        # Generar N facturas individuales
+        generar_pdf(n=args.individuales, individuales=True)
+    else:
+        # Comportamiento por defecto: 200 facturas en un solo archivo
+        generar_pdf()
